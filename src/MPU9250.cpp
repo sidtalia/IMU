@@ -349,7 +349,6 @@ int MPU9250::setSrd(uint8_t srd) {
   if(writeRegister(SMPDIV,srd) < 0){ // setting the sample rate divider
     return -4;
   } 
-  _srd = srd;
   return 1; 
 }
 
@@ -653,7 +652,7 @@ int MPU9250::calibrateGyro() {
     _gxbD += (getGyroX_rads() + _gxb)/((double)_numSamples);
     _gybD += (getGyroY_rads() + _gyb)/((double)_numSamples);
     _gzbD += (getGyroZ_rads() + _gzb)/((double)_numSamples);
-    delay(20);
+    delay(5);
   }
   _gxb = (float)_gxbD;
   _gyb = (float)_gybD;
@@ -707,7 +706,7 @@ this should be run for each axis in each direction (6 total) to find
 the min and max values along each */
 int MPU9250::calibrateAccel() {
   // set the range, bandwidth, and srd
-  if (setAccelRange(ACCEL_RANGE_2G) < 0) {
+  if (setAccelRange(ACCEL_RANGE_16G) < 0) {
     return -1;
   }
   if (setDlpfBandwidth(DLPF_BANDWIDTH_20HZ) < 0) {
@@ -728,35 +727,35 @@ int MPU9250::calibrateAccel() {
     _azbD += (getAccelZ_mss()/_azs + _azb)/((double)_numSamples);
     delay(20);
   }
-  if (_axbD > 9.0f) {
+  if (_axbD > 5.0f) {
     _axmax = (float)_axbD;
   }
-  if (_aybD > 9.0f) {
+  if (_aybD > 5.0f) {
     _aymax = (float)_aybD;
   }
-  if (_azbD > 9.0f) {
+  if (_azbD > 5.0f) {
     _azmax = (float)_azbD;
   }
-  if (_axbD < -9.0f) {
+  if (_axbD < -5.0f) {
     _axmin = (float)_axbD;
   }
-  if (_aybD < -9.0f) {
+  if (_aybD < -5.0f) {
     _aymin = (float)_aybD;
   }
-  if (_azbD < -9.0f) {
+  if (_azbD < -5.0f) {
     _azmin = (float)_azbD;
   }
 
   // find bias and scale factor
-  if ((abs(_axmin) > 9.0f) && (abs(_axmax) > 9.0f)) {
+  if ((abs(_axmin) > 5.0f) && (abs(_axmax) > 5.0f)) {
     _axb = (_axmin + _axmax) / 2.0f;
     _axs = G/((abs(_axmin) + abs(_axmax)) / 2.0f);
   }
-  if ((abs(_aymin) > 9.0f) && (abs(_aymax) > 9.0f)) {
+  if ((abs(_aymin) > 5.0f) && (abs(_aymax) > 5.0f)) {
     _ayb = (_aymin + _aymax) / 2.0f;
     _ays = G/((abs(_aymin) + abs(_aymax)) / 2.0f);
   }
-  if ((abs(_azmin) > 9.0f) && (abs(_azmax) > 9.0f)) {
+  if ((abs(_azmin) > 5.0f) && (abs(_azmax) > 5.0f)) {
     _azb = (_azmin + _azmax) / 2.0f;
     _azs = G/((abs(_azmin) + abs(_azmax)) / 2.0f);
   }
@@ -804,6 +803,34 @@ float MPU9250::getAccelScaleFactorZ() {
   return _azs;
 }
 
+void MPU9250::getSB(float SB[12])
+{
+  SB[0] = getAccelBiasX_mss();
+  SB[1] = getAccelScaleFactorX();
+  SB[2] = getAccelBiasY_mss();
+  SB[3] = getAccelScaleFactorY();
+  SB[4] = getAccelBiasZ_mss();
+  SB[5] = getAccelScaleFactorZ();
+  
+  SB[6] = getMagBiasX_uT();
+  SB[7] = getMagScaleFactorX();
+  SB[8] = getMagBiasY_uT();
+  SB[9] = getMagScaleFactorY();
+  SB[10] = getMagBiasZ_uT();
+  SB[11] = getMagScaleFactorZ();
+}
+
+void MPU9250::setSB(float SB[12])
+{
+  setAccelCalX(SB[0],SB[1]);
+  setAccelCalY(SB[2],SB[3]);
+  setAccelCalZ(SB[4],0.981);
+
+  setMagCalX(SB[6],SB[7]);
+  setMagCalY(SB[8],SB[9]);
+  setMagCalZ(SB[10],SB[11]);
+}
+
 /* sets the accelerometer bias (m/s/s) and scale factor in the X direction */
 void MPU9250::setAccelCalX(float bias,float scaleFactor) {
   _axb = bias;
@@ -829,7 +856,6 @@ int MPU9250::calibrateMag() {
   if (setSrd(19) < 0) {
     return -1;
   }
-
   // get a starting set of data
   readSensor();
   _hxmax = getMagX_uT();
@@ -841,7 +867,8 @@ int MPU9250::calibrateMag() {
 
   // collect data to find max / min in each channel
   _counter = 0;
-  while (_counter < _maxCounts) {
+  long timer = millis();
+  while (_counter < _maxCounts and millis()-timer < 10000 ) {
     _delta = 0.0f;
     _framedelta = 0.0f;
     readSensor();
@@ -971,6 +998,7 @@ void MPU9250::setMagCalZ(float bias,float scaleFactor) {
 int MPU9250::writeRegister(uint8_t subAddress, uint8_t data){
   /* write data to device */
   if( _useSPI ){
+  	delay(2);
     _spi->beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3)); // begin the transaction
     digitalWrite(_csPin,LOW); // select the MPU9250 chip
     _spi->transfer(subAddress); // write the register address
@@ -1085,11 +1113,12 @@ int MPU9250::readAK8963Registers(uint8_t subAddress, uint8_t count, uint8_t* des
 /* gets the MPU9250 WHO_AM_I register value, expected to be 0x71 */
 int MPU9250::whoAmI(){
   // read the WHO AM I register
-  if (readRegisters(WHO_AM_I,1,_buffer) < 0) {
-    return -1;
-  }
-  // return the register value
-  return _buffer[0];
+	delay(1);
+	if (readRegisters(WHO_AM_I,1,_buffer) < 0) {
+	return -1;
+	}
+	// return the register value
+	return _buffer[0];
 }
 
 /* gets the AK8963 WHO_AM_I register value, expected to be 0x48 */

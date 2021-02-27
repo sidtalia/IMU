@@ -115,6 +115,20 @@ class MPU9250{
     void setMagCalX(float bias,float scaleFactor);
     void setMagCalY(float bias,float scaleFactor);
     void setMagCalZ(float bias,float scaleFactor);
+    void getSB(float SB[12]);
+    void setSB(float SB[12]);
+    void getSensorRead(float A[3], float G[3], float M[3])
+    {
+        A[0] = _ax;
+        A[1] = _ay;
+        A[2] = _az;
+        G[0] = _gx;
+        G[1] = _gy;
+        G[2] = _gz;
+        M[0] = _hx;
+        M[1] = _hy;
+        M[2] = _hz;
+    }
   protected:
     // i2c
     uint8_t _address;
@@ -206,14 +220,14 @@ class MPU9250{
     const uint8_t GYRO_FS_SEL_1000DPS = 0x10;
     const uint8_t GYRO_FS_SEL_2000DPS = 0x18;
     const uint8_t ACCEL_CONFIG2 = 0x1D;
-    const uint8_t ACCEL_DLPF_184 = 0x01;
+    const uint8_t ACCEL_DLPF_184 = 0x00;
     const uint8_t ACCEL_DLPF_92 = 0x02;
     const uint8_t ACCEL_DLPF_41 = 0x03;
     const uint8_t ACCEL_DLPF_20 = 0x04;
     const uint8_t ACCEL_DLPF_10 = 0x05;
     const uint8_t ACCEL_DLPF_5 = 0x06;
     const uint8_t CONFIG = 0x1A;
-    const uint8_t GYRO_DLPF_184 = 0x01;
+    const uint8_t GYRO_DLPF_184 = 0x00;
     const uint8_t GYRO_DLPF_92 = 0x02;
     const uint8_t GYRO_DLPF_41 = 0x03;
     const uint8_t GYRO_DLPF_20 = 0x04;
