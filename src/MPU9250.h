@@ -183,7 +183,7 @@ class MPU9250{
     float _ays = 1.0f;
     float _azs = 1.0f;
     // magnetometer bias and scale factor estimation
-    uint16_t _maxCounts = 1000;
+    uint16_t _maxCounts = 2000;
     float _deltaThresh = 0.3f;
     uint8_t _coeff = 8;
     uint16_t _counter;

@@ -868,7 +868,8 @@ int MPU9250::calibrateMag() {
   // collect data to find max / min in each channel
   _counter = 0;
   long timer = millis();
-  while (_counter < _maxCounts and millis()-timer < 10000 ) {
+  while (_counter < _maxCounts and millis()-timer < 120000 )
+  {
     _delta = 0.0f;
     _framedelta = 0.0f;
     readSensor();
